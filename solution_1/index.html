@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Awesome Todo</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://www.gstatic.com/firebasejs/4.1.3/firebase.js"></script>
+    <script>
+      // Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyDFDgxwFEJ6jc5AB6x9kN00O_1EgTY7kRU",
+        authDomain: "aweseom-todos.firebaseapp.com",
+        databaseURL: "https://aweseom-todos.firebaseio.com",
+        projectId: "aweseom-todos",
+        storageBucket: "aweseom-todos.appspot.com",
+        messagingSenderId: "558144708428"
+      };
+      firebase.initializeApp(config);
+
+      const messagesRef = firebase.database().ref('tasks');
+
+      messagesRef.on('child_added', function(data){
+        // console.log(data.val());
+        const task = data.val(); // { name: 'tam', body: 'hello' }
+
+        // We can refactor displaying tasks to a more generic way as there
+        // is duplicated code but I wanted to make things simple so I add them
+        // differently whether the task is compelte or not
+        if(task.complete) {
+          const html = `<div class="well task">
+                          ${task.body}
+                          <a href='javascript:void(0)' class='btn btn-danger delete change-state' data-id='${data.key}' data-body='${task.body}' data-complete='${task.complete}'>Mark InComplete</a>
+                        </div>`;
+
+          $('#complete-tasks').prepend(html);
+        } else {
+          const html = `<div class="well task">
+                           ${task.body}
+                           <div class='align-right'>
+                              <a href='javascript:void(0)' class='btn btn-info delete change-state' data-id='${data.key}' data-body='${task.body}' data-complete='${task.complete}'>Mark complete</a>
+                            </div>
+                        </div>`;
+
+          $('#incomplete-tasks').prepend(html);
+        }
+      });
+
+
+      $(document).ready(function(){
+
+        // this function is used to switch a task from being complete to
+        // incomplete and vice versa. We do this by deleting the task and
+        // re-creating the task with the opposite state for complete. This is
+        // a simple but non-ideal solution, if you want to consider a better
+        // solution look into using update with Firebase here:
+        // https://firebase.google.com/docs/database/web/read-and-write#updating_or_deleting_data
+        // this will require you to have another listener for changes which is
+        // `child_changed` which you read more about right here:
+        // https://firebase.google.com/docs/database/web/lists-of-data
+        $('#tasks').on('click', '.change-state', function(){
+          // delete current task
+          firebase.database().ref(`tasks/${$(this).data('id')}`).remove();
+          $(this).parents('.task').fadeOut();
+
+          // create a new message with opposite `complete` value
+          messagesRef.push({ body: $(this).data('body'), complete: !$(this).data('complete') });
+        });
+
+        $('#task-form').submit(function(event){
+          // this will prevent the form from doing the default behaviour which
+          // is reloading the page in our case (because we didn't add an action
+          // attribute to the form element)
+          event.preventDefault();
+          const body = $('#body').val();
+
+          // we need to submit data to Firebase right here
+          messagesRef.push({ body: body, complete: false }, function(error){
+            if(error) {
+              alert('something went wrong try again');
+            } else {
+              $('#body').val('');
+              $('#body').focus();
+            }
+          });
+
+        });
+      });
+
+    </script>
+
+    <style media="screen">
+      .align-right {
+        text-align: right;
+        float: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Awesome Messages</h1>
+      <form id="task-form">
+        <div class="form-group">
+          <label for="name">Task</label>
+          <input type="text" id="body" class="form-control">
+        </div>
+        <input type="submit" value="Send Message" class="btn btn-primary">
+      </form>
+      <hr>
+      <h2>Pending Tasks</h2>
+      <div id="tasks">
+        <div id="incomplete-tasks">
+          <!-- We will be listing all of our messages in here -->
+        </div>
+        <h2>Complete Tasks</h2>
+        <div id="complete-tasks">
+          <!-- We will be listing all of our messages in here -->
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
